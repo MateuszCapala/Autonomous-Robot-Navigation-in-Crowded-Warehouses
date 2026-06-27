@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>social_mpc</name>
+  <version>0.1.0</version>
+  <description>MPC controller with predictive soft human constraints for social navigation</description>
+  <maintainer email="mateuszoffc@gmail.com">mateusz</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>social_navigation_msgs</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

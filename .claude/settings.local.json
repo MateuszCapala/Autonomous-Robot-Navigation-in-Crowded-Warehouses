@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /home/mateusz/Desktop/non-holonomic-trailer-control/scripts/setup_env.sh)",
+      "Bash(apt-cache search *)",
+      "Bash(xargs -I{} python3 -c \"import json,sys; d=json.load\\(open\\('{}'\\)\\);print\\('{}:', d.get\\('timestamp', d.get\\('time', 'NO_TIME'\\)\\)\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+# AI context
+.ai/
+
+# Docs / manuals (PDFs, not source)
+docs/
+
+# Build
+build/
+install/
+log/
+*.pyc
+__pycache__/
+*.egg-info/
+.eggs/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!cmake/
+
+# Colcon
+.colcon_install_layout
+
+# ACADOS generated code
+acados_generated/
+acados_ocp_solver_*.so
+acados_ocp.json
+c_generated_code/
+
+# Isaac Sim / Omniverse
+_isaac_sim/
+kit/
+*.usd.bak
+*.usda.bak
+.nvidia-omniverse/
+omni.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Clang
+.cache/
+compile_commands.json
+
+# Coverage
+*.gcov
+*.gcda
+*.gcno
+coverage/
+lcov.info
+
+# Python venv
+.venv/
+venv/
+env/
+
+# Secrets / env
+.env
+.env.*
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db

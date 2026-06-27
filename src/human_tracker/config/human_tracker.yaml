@@ -1,0 +1,18 @@
+human_tracker:
+  ros__parameters:
+    lidar_topic: "/front_3d_lidar/lidar_points"
+    odom_topic: "/chassis/odom"
+    odom_frame: "odom"
+    # LiDAR preprocessing
+    height_min: 0.3
+    height_max: 2.0
+    radius_max: 10.0
+    voxel_leaf: 0.05
+    # Clustering
+    cluster_tolerance: 0.3
+    min_cluster_size: 10
+    max_cluster_size: 500
+    # Kalman tracker
+    gate_distance: 1.0
+    confirm_frames: 3
+    lost_frames: 10
