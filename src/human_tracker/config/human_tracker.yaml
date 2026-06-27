@@ -16,3 +16,8 @@ human_tracker:
     gate_distance: 1.0
     confirm_frames: 3
     lost_frames: 10
+    # Motion classification (static object rejection)
+    motion_displacement_thresh: 0.20
+    motion_speed_thresh: 0.25
+    static_timeout_frames: 50
+    pause_timeout_frames: 300

@@ -14,16 +14,22 @@ using StateVec = Eigen::Vector4d;
 using ObsVec   = Eigen::Vector2d;
 using StateCov = Eigen::Matrix4d;
 
-enum class TrackStatus { tentative, confirmed, lost };
+enum class TrackStatus     { tentative, confirmed, lost };
+enum class TrackMotionState { candidate, moving, paused };
 
 struct KalmanParams {
     double dt{0.1};
-    double q_pos{0.1};   // process noise: position
-    double q_vel{0.5};   // process noise: velocity
-    double r_pos{0.2};   // measurement noise: position
-    double gate_dist{1.0};       // max association distance [m]
+    double q_pos{0.1};
+    double q_vel{0.5};
+    double r_pos{0.2};
+    double gate_dist{1.0};
     int    confirm_frames{3};
     int    lost_frames{10};
+    // Motion classification
+    double motion_displacement_thresh{0.20}; // [m] displacement from spawn (must also exceed speed thresh)
+    double motion_speed_thresh{0.25};        // [m/s] Kalman velocity estimate to classify as human
+    int    static_timeout_frames{50};        // frames in candidate before discarding as static object
+    int    pause_timeout_frames{300};        // frames paused before discarding (30s at 10Hz)
 };
 
 struct Prediction {
@@ -32,12 +38,16 @@ struct Prediction {
 };
 
 struct Track {
-    uint32_t   id;
-    TrackStatus status{TrackStatus::tentative};
-    StateVec   state{StateVec::Zero()};
-    StateCov   cov{StateCov::Identity()};
-    int        seen_count{0};
-    int        missed_count{0};
+    uint32_t        id;
+    TrackStatus     status{TrackStatus::tentative};
+    TrackMotionState motion_state{TrackMotionState::candidate};
+    StateVec        state{StateVec::Zero()};
+    StateCov        cov{StateCov::Identity()};
+    int             seen_count{0};
+    int             missed_count{0};
+    int             motion_frames{0};  // frames in current motion_state
+    double          spawn_x{0.0};      // position at confirmation (for displacement check)
+    double          spawn_y{0.0};
 
     Prediction predict_horizon(double dt, int N) const;
     double distance_to(double obs_x, double obs_y) const;

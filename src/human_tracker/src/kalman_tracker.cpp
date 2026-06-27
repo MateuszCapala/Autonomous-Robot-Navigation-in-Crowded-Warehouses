@@ -36,7 +36,8 @@ const std::vector<Track>& KalmanTracker::confirmed_tracks() const {
     static std::vector<Track> confirmed;
     confirmed.clear();
     for (const auto& t : tracks_) {
-        if (t.status == TrackStatus::confirmed) {
+        if (t.status == TrackStatus::confirmed &&
+            t.motion_state != TrackMotionState::candidate) {
             confirmed.push_back(t);
         }
     }
@@ -95,10 +96,43 @@ void KalmanTracker::associate_and_correct(const std::vector<ObsVec>& detections)
 void KalmanTracker::manage_lifecycles() {
     for (auto& t : tracks_) {
         if (t.status == TrackStatus::tentative && t.seen_count >= params_.confirm_frames) {
-            t.status = TrackStatus::confirmed;
+            t.status  = TrackStatus::confirmed;
+            t.spawn_x = t.state[0];
+            t.spawn_y = t.state[1];
         }
         if (t.missed_count > params_.lost_frames) {
             t.status = TrackStatus::lost;
+            continue;
+        }
+        if (t.status != TrackStatus::confirmed) continue;
+
+        const double speed = std::hypot(t.state[2], t.state[3]);
+        const double disp  = std::hypot(t.state[0] - t.spawn_x, t.state[1] - t.spawn_y);
+
+        switch (t.motion_state) {
+            case TrackMotionState::candidate:
+                if (disp >= params_.motion_displacement_thresh &&
+                    speed >= params_.motion_speed_thresh) {
+                    t.motion_state  = TrackMotionState::moving;
+                    t.motion_frames = 0;
+                } else if (++t.motion_frames > params_.static_timeout_frames) {
+                    t.status = TrackStatus::lost;
+                }
+                break;
+            case TrackMotionState::moving:
+                if (speed < 0.10) {
+                    t.motion_state  = TrackMotionState::paused;
+                    t.motion_frames = 0;
+                }
+                break;
+            case TrackMotionState::paused:
+                if (speed >= 0.15) {
+                    t.motion_state  = TrackMotionState::moving;
+                    t.motion_frames = 0;
+                } else if (++t.motion_frames > params_.pause_timeout_frames) {
+                    t.status = TrackStatus::lost;
+                }
+                break;
         }
     }
     std::erase_if(tracks_, [](const Track& t) {

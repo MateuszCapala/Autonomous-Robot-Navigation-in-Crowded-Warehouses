@@ -39,9 +39,13 @@ public:
         declare_parameter<double>("cluster_tolerance", 0.3);
         declare_parameter<int>   ("min_cluster_size",  10);
         declare_parameter<int>   ("max_cluster_size",  500);
-        declare_parameter<double>("gate_distance",     1.0);
-        declare_parameter<int>   ("confirm_frames",    3);
-        declare_parameter<int>   ("lost_frames",       10);
+        declare_parameter<double>("gate_distance",                1.0);
+        declare_parameter<int>   ("confirm_frames",             3);
+        declare_parameter<int>   ("lost_frames",                10);
+        declare_parameter<double>("motion_displacement_thresh", 0.20);
+        declare_parameter<double>("motion_speed_thresh",        0.25);
+        declare_parameter<int>   ("static_timeout_frames",      50);
+        declare_parameter<int>   ("pause_timeout_frames",       300);
         declare_parameter<std::string>("lidar_topic",  "/front_3d_lidar/lidar_points");
         declare_parameter<std::string>("odom_topic",   "/chassis/odom");
         declare_parameter<std::string>("odom_frame",   "odom");
@@ -62,10 +66,14 @@ public:
         cluster_params_ = cp;
 
         KalmanParams kp;
-        kp.dt            = DT;
-        kp.gate_dist     = get_parameter("gate_distance").as_double();
-        kp.confirm_frames = get_parameter("confirm_frames").as_int();
-        kp.lost_frames   = get_parameter("lost_frames").as_int();
+        kp.dt                          = DT;
+        kp.gate_dist                   = get_parameter("gate_distance").as_double();
+        kp.confirm_frames              = get_parameter("confirm_frames").as_int();
+        kp.lost_frames                 = get_parameter("lost_frames").as_int();
+        kp.motion_displacement_thresh  = get_parameter("motion_displacement_thresh").as_double();
+        kp.motion_speed_thresh         = get_parameter("motion_speed_thresh").as_double();
+        kp.static_timeout_frames       = get_parameter("static_timeout_frames").as_int();
+        kp.pause_timeout_frames        = get_parameter("pause_timeout_frames").as_int();
         tracker_ = std::make_unique<KalmanTracker>(kp);
 
         tf_buffer_   = std::make_shared<tf2_ros::Buffer>(get_clock());
