@@ -32,10 +32,12 @@ class HumanTrackerNode : public rclcpp_lifecycle::LifecycleNode {
 public:
     explicit HumanTrackerNode(const rclcpp::NodeOptions& opts)
         : rclcpp_lifecycle::LifecycleNode("human_tracker", opts) {
-        declare_parameter<double>("height_min",        0.3);
-        declare_parameter<double>("height_max",        2.0);
-        declare_parameter<double>("radius_max",       10.0);
-        declare_parameter<double>("voxel_leaf",        0.05);
+        declare_parameter<double>("height_min",           0.3);
+        declare_parameter<double>("height_max",           2.0);
+        declare_parameter<double>("radius_min",           0.35);
+        declare_parameter<double>("radius_max",          10.0);
+        declare_parameter<double>("voxel_leaf",           0.05);
+        declare_parameter<double>("obstacle_radius_max",  4.0);
         declare_parameter<double>("cluster_tolerance", 0.3);
         declare_parameter<int>   ("min_cluster_size",  10);
         declare_parameter<int>   ("max_cluster_size",  500);
@@ -55,9 +57,12 @@ public:
         PreprocessorParams pp;
         pp.height_min = static_cast<float>(get_parameter("height_min").as_double());
         pp.height_max = static_cast<float>(get_parameter("height_max").as_double());
+        pp.radius_min = static_cast<float>(get_parameter("radius_min").as_double());
         pp.radius_max = static_cast<float>(get_parameter("radius_max").as_double());
         pp.voxel_leaf = static_cast<float>(get_parameter("voxel_leaf").as_double());
         preproc_params_ = pp;
+        obstacle_radius_max_ = static_cast<float>(
+            get_parameter("obstacle_radius_max").as_double());
 
         ClustererParams cp;
         cp.cluster_tolerance = static_cast<float>(get_parameter("cluster_tolerance").as_double());
@@ -162,7 +167,12 @@ private:
             pub_clusters_->publish(debug_msg);
         }
 
-        const auto detections = extract_humans(filtered, cluster_params_);
+        latest_obstacles_.clear();
+        const auto detections = extract_humans(
+            filtered, cluster_params_,
+            robot_x_, robot_y_,
+            obstacle_radius_max_,
+            &latest_obstacles_);
         std::vector<ObsVec> obs;
         obs.reserve(detections.size());
         for (const auto& d : detections) {
@@ -191,6 +201,15 @@ private:
 
         arr.num_confirmed = static_cast<uint32_t>(sorted.size());
 
+        // Sort obstacles by distance to robot
+        std::vector<DetectedHuman> obs_sorted = latest_obstacles_;
+        std::ranges::sort(obs_sorted, [this](const DetectedHuman& a, const DetectedHuman& b) {
+            const float da = (a.x - robot_x_) * (a.x - robot_x_) + (a.y - robot_y_) * (a.y - robot_y_);
+            const float db = (b.x - robot_x_) * (b.x - robot_x_) + (b.y - robot_y_) * (b.y - robot_y_);
+            return da < db;
+        });
+
+        int obs_idx = 0;
         for (int i = 0; i < M_MAX; ++i) {
             social_navigation_msgs::msg::HumanState hs;
             hs.header = arr.header;
@@ -198,16 +217,24 @@ private:
             if (i < static_cast<int>(sorted.size())) {
                 const Track& t = *sorted[i];
                 const auto pred = t.predict_horizon(DT, N);
-                hs.id               = t.id;
-                hs.x                = t.state[0];
-                hs.y                = t.state[1];
-                hs.vx               = t.state[2];
-                hs.vy               = t.state[3];
+                hs.id                = t.id;
+                hs.x                 = t.state[0];
+                hs.y                 = t.state[1];
+                hs.vx                = t.state[2];
+                hs.vy                = t.state[3];
                 hs.distance_to_robot = t.distance_to(robot_x_, robot_y_);
                 hs.pred_x.assign(pred.x.begin(), pred.x.end());
                 hs.pred_y.assign(pred.y.begin(), pred.y.end());
+            } else if (obs_idx < static_cast<int>(obs_sorted.size())) {
+                // Static obstacle — constant position for all prediction steps
+                const DetectedHuman& ob = obs_sorted[obs_idx++];
+                hs.id  = UINT32_MAX - 1 - static_cast<uint32_t>(obs_idx);
+                hs.x   = ob.x; hs.y = ob.y;
+                hs.vx  = 0.0;  hs.vy = 0.0;
+                hs.distance_to_robot = std::hypot(ob.x - robot_x_, ob.y - robot_y_);
+                hs.pred_x.assign(N, ob.x);
+                hs.pred_y.assign(N, ob.y);
             } else {
-                // Dummy — place far away so MPC constraint is inactive
                 hs.id = UINT32_MAX;
                 hs.x  = 999.0; hs.y = 999.0;
                 hs.vx = 0.0;   hs.vy = 0.0;
@@ -234,40 +261,68 @@ private:
 
         int id = 0;
         for (const auto& t : tracks) {
-            // Cylinder marker for human body
-            visualization_msgs::msg::Marker m;
-            m.header.frame_id = odom_frame_;
-            m.header.stamp    = stamp;
-            m.ns              = "humans";
-            m.id              = id++;
-            m.type            = visualization_msgs::msg::Marker::CYLINDER;
-            m.action          = visualization_msgs::msg::Marker::ADD;
-            m.pose.position.x = t.state[0];
-            m.pose.position.y = t.state[1];
-            m.pose.position.z = 0.9;
-            m.pose.orientation.w = 1.0;
-            m.scale.x = 0.5; m.scale.y = 0.5; m.scale.z = 1.8;
-            m.color.r = 1.0f; m.color.g = 0.3f; m.color.b = 0.0f; m.color.a = 0.7f;
-            m.lifetime = rclcpp::Duration::from_seconds(0.5);
-            ma.markers.push_back(m);
+            const auto pred = t.predict_horizon(DT, N);
+            const auto lifetime = rclcpp::Duration::from_seconds(0.5);
 
-            // Velocity arrow
-            visualization_msgs::msg::Marker arrow;
-            arrow.header = m.header;
-            arrow.ns     = "velocities";
-            arrow.id     = id++;
-            arrow.type   = visualization_msgs::msg::Marker::ARROW;
-            arrow.action = visualization_msgs::msg::Marker::ADD;
-            geometry_msgs::msg::Point start, end;
-            start.x = t.state[0]; start.y = t.state[1]; start.z = 1.0;
-            end.x   = t.state[0] + t.state[2];
-            end.y   = t.state[1] + t.state[3];
-            end.z   = 1.0;
-            arrow.points = {start, end};
-            arrow.scale.x = 0.05; arrow.scale.y = 0.1;
-            arrow.color.r = 1.0f; arrow.color.g = 1.0f; arrow.color.b = 0.0f; arrow.color.a = 0.9f;
-            arrow.lifetime = rclcpp::Duration::from_seconds(0.5);
-            ma.markers.push_back(arrow);
+            // Body cylinder
+            visualization_msgs::msg::Marker body;
+            body.header.frame_id = odom_frame_;
+            body.header.stamp    = stamp;
+            body.ns              = "humans";
+            body.id              = id++;
+            body.type            = visualization_msgs::msg::Marker::CYLINDER;
+            body.action          = visualization_msgs::msg::Marker::ADD;
+            body.pose.position.x = t.state[0];
+            body.pose.position.y = t.state[1];
+            body.pose.position.z = 0.9;
+            body.pose.orientation.w = 1.0;
+            body.scale.x = 0.5; body.scale.y = 0.5; body.scale.z = 1.8;
+            body.color.r = 1.0f; body.color.g = 0.3f; body.color.b = 0.0f; body.color.a = 0.8f;
+            body.lifetime = lifetime;
+            ma.markers.push_back(body);
+
+            // Prediction trajectory line
+            visualization_msgs::msg::Marker line;
+            line.header  = body.header;
+            line.ns      = "pred_lines";
+            line.id      = id++;
+            line.type    = visualization_msgs::msg::Marker::LINE_STRIP;
+            line.action  = visualization_msgs::msg::Marker::ADD;
+            line.scale.x = 0.04f;
+            line.color.r = 1.0f; line.color.g = 0.8f; line.color.b = 0.0f; line.color.a = 0.6f;
+            line.lifetime = lifetime;
+            {
+                geometry_msgs::msg::Point p0;
+                p0.x = t.state[0]; p0.y = t.state[1]; p0.z = 0.1;
+                line.points.push_back(p0);
+                for (int k = 0; k < N; ++k) {
+                    geometry_msgs::msg::Point pk;
+                    pk.x = pred.x[k]; pk.y = pred.y[k]; pk.z = 0.1;
+                    line.points.push_back(pk);
+                }
+            }
+            ma.markers.push_back(line);
+
+            // Uncertainty spheres every 6 steps — radius grows with time
+            for (int k = 5; k < N; k += 6) {
+                visualization_msgs::msg::Marker sphere;
+                sphere.header  = body.header;
+                sphere.ns      = "pred_uncertainty";
+                sphere.id      = id++;
+                sphere.type    = visualization_msgs::msg::Marker::SPHERE;
+                sphere.action  = visualization_msgs::msg::Marker::ADD;
+                sphere.pose.position.x = pred.x[k];
+                sphere.pose.position.y = pred.y[k];
+                sphere.pose.position.z = 0.1;
+                sphere.pose.orientation.w = 1.0;
+                const float r = 0.15f + 0.025f * static_cast<float>(k);
+                sphere.scale.x = r; sphere.scale.y = r; sphere.scale.z = 0.05f;
+                const float alpha = 0.45f - 0.35f * static_cast<float>(k) / N;
+                sphere.color.r = 1.0f; sphere.color.g = 0.6f; sphere.color.b = 0.0f;
+                sphere.color.a = std::max(0.05f, alpha);
+                sphere.lifetime = lifetime;
+                ma.markers.push_back(sphere);
+            }
         }
 
         pub_markers_->publish(ma);
@@ -288,6 +343,8 @@ private:
     // Robot pose (updated by odom subscriber)
     float robot_x_{0.f};
     float robot_y_{0.f};
+    float obstacle_radius_max_{4.f};
+    std::vector<DetectedHuman> latest_obstacles_;
 
     // Publishers / subscribers
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_lidar_;

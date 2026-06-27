@@ -6,7 +6,7 @@ import os
 
 
 def generate_launch_description():
-    share = get_package_share_directory("human_tracker")
+    share    = get_package_share_directory("human_tracker")
     cfg      = os.path.join(share, "config", "human_tracker.yaml")
     rviz_cfg = os.path.join(share, "config", "human_tracker.rviz")
 
@@ -18,20 +18,40 @@ def generate_launch_description():
         output="screen",
     )
 
+    mpc_node = Node(
+        package="social_mpc",
+        executable="social_mpc_node",
+        name="social_mpc",
+        parameters=[{"use_sim_time": True}],
+        output="screen",
+    )
+
     configure_cmd = TimerAction(
         period=2.0,
-        actions=[ExecuteProcess(
-            cmd=["ros2", "lifecycle", "set", "/human_tracker", "configure"],
-            output="screen",
-        )],
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/human_tracker", "configure"],
+                output="screen",
+            ),
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/social_mpc", "configure"],
+                output="screen",
+            ),
+        ],
     )
 
     activate_cmd = TimerAction(
         period=4.0,
-        actions=[ExecuteProcess(
-            cmd=["ros2", "lifecycle", "set", "/human_tracker", "activate"],
-            output="screen",
-        )],
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/human_tracker", "activate"],
+                output="screen",
+            ),
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/social_mpc", "activate"],
+                output="screen",
+            ),
+        ],
     )
 
     rviz_node = Node(
@@ -44,6 +64,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         tracker_node,
+        mpc_node,
         configure_cmd,
         activate_cmd,
         rviz_node,

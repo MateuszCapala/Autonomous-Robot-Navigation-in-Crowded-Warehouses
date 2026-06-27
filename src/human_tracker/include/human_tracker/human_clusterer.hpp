@@ -23,9 +23,15 @@ struct DetectedHuman {
     float z;   // centroid z [m]
 };
 
-// Extract human candidates from preprocessed cloud.
-// Returns centroids (x, y) of clusters that pass bounding-box heuristics.
-std::vector<DetectedHuman> extract_humans(const CloudPtr& cloud,
-                                          const ClustererParams& p);
+// Extract human candidates and nearby static obstacles from preprocessed cloud.
+// humans:    clusters passing bounding-box heuristics.
+// obstacles: nearby clusters that failed the human test (nearest point used).
+//            Pass nullptr to skip obstacle collection.
+std::vector<DetectedHuman> extract_humans(
+    const CloudPtr& cloud,
+    const ClustererParams& p,
+    float robot_x, float robot_y,
+    float obstacle_radius_max,
+    std::vector<DetectedHuman>* obstacles);
 
 } // namespace human_tracker

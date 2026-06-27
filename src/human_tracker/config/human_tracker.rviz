@@ -92,7 +92,8 @@ Visualization Manager:
       Name: MarkerArray Humans
       Namespaces:
         humans: true
-        velocities: true
+        pred_lines: true
+        pred_uncertainty: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -100,6 +101,34 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /humans/markers
+      Value: true
+
+    - Class: rviz_default_plugins/Path
+      Alpha: 1
+      Color: 0; 200; 255
+      Enabled: true
+      Head Diameter: 0.1
+      Head Length: 0.05
+      Length: 0.1
+      Line Style: Lines
+      Line Width: 0.05
+      Name: MPC Planned Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.05
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.03
+      Shaft Diameter: 0.03
+      Shaft Length: 0.1
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /social_mpc/planned_path
       Value: true
 
     - Class: rviz_default_plugins/PointCloud2
@@ -146,6 +175,13 @@ Visualization Manager:
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
       Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
   Transformation:
     Current:
       Class: rviz_default_plugins/TF

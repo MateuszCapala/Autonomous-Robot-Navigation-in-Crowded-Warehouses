@@ -6,8 +6,10 @@ human_tracker:
     # LiDAR preprocessing
     height_min: 0.3
     height_max: 2.0
+    radius_min: 0.35
     radius_max: 10.0
     voxel_leaf: 0.05
+    obstacle_radius_max: 4.0
     # Clustering
     cluster_tolerance: 0.3
     min_cluster_size: 10

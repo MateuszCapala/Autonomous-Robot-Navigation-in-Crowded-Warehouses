@@ -18,11 +18,13 @@ CloudPtr preprocess(const CloudPtr& input,
 
     CloudPtr radius_filtered(new Cloud);
     radius_filtered->reserve(height_filtered->size());
-    const float r2 = p.radius_max * p.radius_max;
+    const float r_min2 = p.radius_min * p.radius_min;
+    const float r_max2 = p.radius_max * p.radius_max;
     for (const auto& pt : *height_filtered) {
         const float dx = pt.x - robot_x;
         const float dy = pt.y - robot_y;
-        if (dx * dx + dy * dy <= r2) {
+        const float d2 = dx * dx + dy * dy;
+        if (d2 >= r_min2 && d2 <= r_max2) {
             radius_filtered->push_back(pt);
         }
     }
