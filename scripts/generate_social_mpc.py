@@ -25,15 +25,15 @@ B_ELL = 1.2  # semi-axis along Y [m]
 # ── Cost weights ──────────────────────────────────────────────────────────────
 W_X     = 5.0   # position error X
 W_Y     = 5.0   # position error Y
-W_THETA = 1.0   # heading error
+W_THETA = 0.1   # heading error — low: don't constrain turning during avoidance
 W_V     = 0.5   # linear velocity regularisation
-W_OMEGA = 0.5   # angular velocity regularisation
+W_OMEGA = 0.3   # angular velocity regularisation
 
 W_X_e     = 10.0  # terminal position X
 W_Y_e     = 10.0  # terminal position Y
 W_THETA_e = 2.0   # terminal heading
 
-W_SLACK = 150.0  # soft ellipse violation penalty
+W_SLACK = 800.0  # soft ellipse violation penalty
 
 # ── Control bounds ────────────────────────────────────────────────────────────
 V_MAX   =  1.5   # [m/s]
@@ -147,13 +147,14 @@ def generate():
     ocp.cost.zu_e = np.zeros(M)
 
     # ── Solver options ────────────────────────────────────────────────────────
-    ocp.solver_options.tf               = N * DT
-    ocp.solver_options.integrator_type  = 'ERK'
-    ocp.solver_options.nlp_solver_type  = 'SQP_RTI'
-    ocp.solver_options.qp_solver        = 'PARTIAL_CONDENSING_HPIPM'
-    ocp.solver_options.qp_solver_cond_N = 5
-    ocp.solver_options.hessian_approx   = 'GAUSS_NEWTON'
-    ocp.solver_options.print_level      = 0
+    ocp.solver_options.tf                  = N * DT
+    ocp.solver_options.integrator_type     = 'ERK'
+    ocp.solver_options.nlp_solver_type     = 'SQP'
+    ocp.solver_options.nlp_solver_max_iter = 3
+    ocp.solver_options.qp_solver           = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.qp_solver_cond_N    = 5
+    ocp.solver_options.hessian_approx      = 'GAUSS_NEWTON'
+    ocp.solver_options.print_level         = 0
 
     # ── Initial values (overridden at runtime) ────────────────────────────────
     ocp.constraints.x0      = np.zeros(nx)

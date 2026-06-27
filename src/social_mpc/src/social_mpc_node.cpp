@@ -10,14 +10,17 @@
 #include <social_navigation_msgs/msg/human_array.hpp>
 
 #include <cmath>
+#include <limits>
 #include <optional>
 
 namespace social_mpc {
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-constexpr double GOAL_REACHED_DIST = 0.3;  // [m]
-constexpr double DT                = 0.1;  // [s] — must match codegen
+constexpr double GOAL_REACHED_DIST = 0.3;   // [m]
+constexpr double DT                = 0.1;   // [s] — must match codegen
+constexpr double HUMAN_STOP_DIST   = 0.8;   // [m] full stop
+constexpr double HUMAN_SLOW_DIST   = 2.5;   // [m] start scaling velocity
 
 class SocialMpcNode : public rclcpp_lifecycle::LifecycleNode {
 public:
@@ -174,10 +177,33 @@ private:
         }
         pub_path_->publish(path_msg);
 
+        // Reactive safety: scale linear velocity based on closest confirmed human
+        double min_human_dist = std::numeric_limits<double>::max();
+        if (latest_humans_) {
+            const uint32_t n = latest_humans_->num_confirmed;
+            for (uint32_t i = 0; i < n && i < latest_humans_->humans.size(); ++i) {
+                min_human_dist = std::min(min_human_dist,
+                    static_cast<double>(latest_humans_->humans[i].distance_to_robot));
+            }
+        }
+
+        if (min_human_dist <= HUMAN_STOP_DIST) {
+            RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 500,
+                "Safety stop: human at %.2fm", min_human_dist);
+            publish_stop();
+            return;
+        }
+
+        double vel_scale = 1.0;
+        if (min_human_dist < HUMAN_SLOW_DIST) {
+            vel_scale = (min_human_dist - HUMAN_STOP_DIST) /
+                        (HUMAN_SLOW_DIST - HUMAN_STOP_DIST);
+        }
+
         const RobotControl u_clamped = clamp_control(out.u0, RobotParams{});
         geometry_msgs::msg::Twist cmd;
-        cmd.linear.x  = u_clamped[0];
-        cmd.angular.z = u_clamped[1];
+        cmd.linear.x  = u_clamped[0] * vel_scale;
+        cmd.angular.z = u_clamped[1];  // full angular velocity for steering away
         pub_cmd_vel_->publish(cmd);
     }
 
