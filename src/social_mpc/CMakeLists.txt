@@ -30,6 +30,7 @@ file(GLOB ACADOS_GEN_SOURCES
     ${ACADOS_GEN_DIR}/*.c
     ${ACADOS_GEN_DIR}/social_mpc_model/*.c
     ${ACADOS_GEN_DIR}/social_mpc_constraints/*.c
+    ${ACADOS_GEN_DIR}/social_mpc_cost/*.c
 )
 list(FILTER ACADOS_GEN_SOURCES EXCLUDE REGEX "main_.*\\.c$")
 list(FILTER ACADOS_GEN_SOURCES EXCLUDE REGEX "acados_sim_solver.*\\.c$")

@@ -58,15 +58,21 @@ MpcOutput MpcSolver::solve(const MpcInput& input) {
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "lbx", x0);
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "ubx", x0);
 
-    // Stage cost reference [X_ref, Y_ref, theta_ref, 0, 0]
-    double yref[MPC_NX + MPC_NU] = {
-        input.goal[0], input.goal[1], input.goal[2], 0.0, 0.0
+    // Stage yref: [Xg, Yg, tg, 0, 0,  0, 0, 0, 0, 0]
+    //             goal(3) + control(2) + repulsion targets(5, always 0)
+    double yref[MPC_NY] = {
+        input.goal[0], input.goal[1], input.goal[2], 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0
     };
     for (int k = 0; k < MPC_N; ++k)
         ocp_nlp_cost_model_set(cfg, dims, nlp_in, k, "yref", yref);
 
-    // Terminal cost reference [X_ref, Y_ref, theta_ref]
-    double yref_e[MPC_NX] = {input.goal[0], input.goal[1], input.goal[2]};
+    // Terminal yref: [Xg, Yg, tg,  0, 0, 0, 0, 0]
+    //                goal(3) + repulsion targets(5, always 0)
+    double yref_e[MPC_NY_E] = {
+        input.goal[0], input.goal[1], input.goal[2],
+        0.0, 0.0, 0.0, 0.0, 0.0
+    };
     ocp_nlp_cost_model_set(cfg, dims, nlp_in, MPC_N, "yref", yref_e);
 
     // Human parameters per stage

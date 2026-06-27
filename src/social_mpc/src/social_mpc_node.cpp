@@ -19,8 +19,10 @@ using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface
 
 constexpr double GOAL_REACHED_DIST = 0.3;   // [m]
 constexpr double DT                = 0.1;   // [s] — must match codegen
-constexpr double HUMAN_STOP_DIST   = 0.8;   // [m] full stop
-constexpr double HUMAN_SLOW_DIST   = 2.5;   // [m] start scaling velocity
+constexpr double HUMAN_STOP_DIST        = 0.8;  // [m] full stop
+constexpr double HUMAN_SLOW_DIST        = 1.4;  // [m] proximity slow-down
+constexpr double CROSSING_YIELD_DIST    = 2.5;  // [m] closest-approach distance that triggers yield
+constexpr double CROSSING_YIELD_HORIZON = 3.0;  // [s] lookahead for crossing detection
 
 class SocialMpcNode : public rclcpp_lifecycle::LifecycleNode {
 public:
@@ -144,11 +146,19 @@ private:
             real_humans = static_cast<int>(latest_humans_->num_confirmed);
             for (int k = 0; k < MPC_N; ++k) {
                 for (int i = 0; i < MPC_M; ++i) {
-                    const int base = k * MPC_NP + i * 2;
+                    // Positions: first M*2 slots
+                    const int pos_base = k * MPC_NP + i * 2;
+                    // Velocities: next M*2 slots (offset by M*2 within stage)
+                    const int vel_base = k * MPC_NP + MPC_M * 2 + i * 2;
                     if (i < static_cast<int>(humans.size()) &&
                         k < static_cast<int>(humans[i].pred_x.size())) {
-                        input.human_params[base]     = humans[i].pred_x[k];
-                        input.human_params[base + 1] = humans[i].pred_y[k];
+                        input.human_params[pos_base]     = humans[i].pred_x[k];
+                        input.human_params[pos_base + 1] = humans[i].pred_y[k];
+                        input.human_params[vel_base]     = humans[i].vx;
+                        input.human_params[vel_base + 1] = humans[i].vy;
+                    } else {
+                        input.human_params[vel_base]     = 0.0;
+                        input.human_params[vel_base + 1] = 0.0;
                     }
                 }
             }
@@ -177,13 +187,41 @@ private:
         }
         pub_path_->publish(path_msg);
 
-        // Reactive safety: scale linear velocity based on closest confirmed human
+        // Reactive safety: proximity stop/slow + crossing yield
         double min_human_dist = std::numeric_limits<double>::max();
+        double yield_scale    = 1.0;
+
         if (latest_humans_) {
             const uint32_t n = latest_humans_->num_confirmed;
             for (uint32_t i = 0; i < n && i < latest_humans_->humans.size(); ++i) {
+                const auto& h = latest_humans_->humans[i];
                 min_human_dist = std::min(min_human_dist,
-                    static_cast<double>(latest_humans_->humans[i].distance_to_robot));
+                    static_cast<double>(h.distance_to_robot));
+
+                // Crossing yield: slow robot when a human will cross its straight-ahead path.
+                // Uses time-to-closest-approach (TCA) between robot and human.
+                const double rv  = out.u0[0];
+                const double rvx = rv * std::cos(robot_state_[2]);
+                const double rvy = rv * std::sin(robot_state_[2]);
+                const double dx  = robot_state_[0] - h.x;
+                const double dy  = robot_state_[1] - h.y;
+                const double dvx = rvx - h.vx;
+                const double dvy = rvy - h.vy;
+                const double dv2 = dvx * dvx + dvy * dvy;
+
+                if (dv2 > 0.01) {
+                    const double t_ca = -(dx * dvx + dy * dvy) / dv2;
+                    if (t_ca > 0.0 && t_ca < CROSSING_YIELD_HORIZON) {
+                        const double d_ca = std::hypot(dx + t_ca * dvx, dy + t_ca * dvy);
+                        if (d_ca < CROSSING_YIELD_DIST) {
+                            // Yield: slow proportionally — closer approach = more slowdown
+                            const double urgency = 1.0 - d_ca / CROSSING_YIELD_DIST;
+                            const double time_factor = 1.0 - t_ca / CROSSING_YIELD_HORIZON;
+                            yield_scale = std::min(yield_scale,
+                                1.0 - 0.95 * urgency * time_factor);
+                        }
+                    }
+                }
             }
         }
 
@@ -194,10 +232,11 @@ private:
             return;
         }
 
-        double vel_scale = 1.0;
+        double vel_scale = yield_scale;
         if (min_human_dist < HUMAN_SLOW_DIST) {
-            vel_scale = (min_human_dist - HUMAN_STOP_DIST) /
-                        (HUMAN_SLOW_DIST - HUMAN_STOP_DIST);
+            const double prox_scale = (min_human_dist - HUMAN_STOP_DIST) /
+                                      (HUMAN_SLOW_DIST - HUMAN_STOP_DIST);
+            vel_scale = std::min(vel_scale, prox_scale);
         }
 
         const RobotControl u_clamped = clamp_control(out.u0, RobotParams{});

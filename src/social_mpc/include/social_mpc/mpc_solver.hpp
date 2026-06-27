@@ -5,11 +5,13 @@
 
 namespace social_mpc {
 
-constexpr int MPC_NX = 3;   // [X, Y, theta]
-constexpr int MPC_NU = 2;   // [v, omega]
-constexpr int MPC_NP = 10;  // per stage: M=5 humans * [xh, yh]
-constexpr int MPC_N  = 30;
-constexpr int MPC_M  = 5;
+constexpr int MPC_NX   = 3;                        // [X, Y, theta]
+constexpr int MPC_NU   = 2;                        // [v, omega]
+constexpr int MPC_NP   = 20;                       // per stage: M*[xh,yh] + M*[vhx,vhy]
+constexpr int MPC_N    = 30;
+constexpr int MPC_M    = 5;
+constexpr int MPC_NY   = MPC_NX + MPC_NU + MPC_M; // 10: goal + control + repulsion
+constexpr int MPC_NY_E = MPC_NX + MPC_M;          //  8: goal + repulsion (no control)
 
 struct MpcInput {
     Eigen::Vector3d x0;                             // current robot state [X, Y, theta]
