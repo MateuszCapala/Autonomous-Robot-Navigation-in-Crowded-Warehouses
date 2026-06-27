@@ -11,21 +11,12 @@ struct RobotParams {
     double omega_max{1.0};    // max angular velocity [rad/s]
 };
 
-// State: [X, Y, theta]
-using RobotState   = Eigen::Vector3d;
-// Control: [v, omega]
-using RobotControl = Eigen::Vector2d;
+using RobotState   = Eigen::Vector3d; // [X, Y, theta]
+using RobotControl = Eigen::Vector2d; // [v, omega]
 
-// Continuous kinematics: x_dot = f(x, u)
 RobotState kinematics(const RobotState& x, const RobotControl& u);
-
-// RK4 integration
 RobotState integrate_rk4(const RobotState& x, const RobotControl& u, double dt);
-
-// Clamp to box constraints
 RobotControl clamp_control(const RobotControl& u, const RobotParams& p);
-
-// Wrap angle to [-pi, pi]
 double wrap_angle(double a);
 
 } // namespace social_mpc

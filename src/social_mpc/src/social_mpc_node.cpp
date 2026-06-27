@@ -18,7 +18,7 @@ namespace social_mpc {
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 constexpr double GOAL_REACHED_DIST = 0.3;   // [m]
-constexpr double DT                = 0.1;   // [s] — must match codegen
+constexpr double DT                = 0.1;   // must match generate_social_mpc.py
 constexpr double HUMAN_STOP_DIST        = 0.8;  // [m] full stop
 constexpr double HUMAN_SLOW_DIST        = 1.4;  // [m] proximity slow-down
 constexpr double CROSSING_YIELD_DIST    = 2.5;  // [m] closest-approach distance that triggers yield

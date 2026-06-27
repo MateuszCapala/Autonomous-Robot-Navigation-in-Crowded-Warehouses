@@ -10,23 +10,20 @@ struct ClustererParams {
     float cluster_tolerance{0.3f};  // [m] max distance between cluster points
     int   min_cluster_size{10};
     int   max_cluster_size{500};
-    // Bounding box heuristics for human validation
-    float bb_min_xy{0.2f};   // [m] min width/depth of cluster
-    float bb_max_xy{0.9f};   // [m] max width/depth
-    float bb_min_z{0.5f};    // [m] min height
-    float bb_max_z{2.1f};    // [m] max height
+    float bb_min_xy{0.2f};   // [m]
+    float bb_max_xy{0.9f};   // [m]
+    float bb_min_z{0.5f};    // [m]
+    float bb_max_z{2.1f};    // [m]
 };
 
 struct DetectedHuman {
-    float x;   // centroid x in odom frame [m]
-    float y;   // centroid y in odom frame [m]
-    float z;   // centroid z [m]
+    float x;
+    float y;
+    float z;
 };
 
-// Extract human candidates and nearby static obstacles from preprocessed cloud.
-// humans:    clusters passing bounding-box heuristics.
-// obstacles: nearby clusters that failed the human test (nearest point used).
-//            Pass nullptr to skip obstacle collection.
+// obstacles uses nearest point to robot, not centroid
+// pass nullptr for obstacles to skip collection
 std::vector<DetectedHuman> extract_humans(
     const CloudPtr& cloud,
     const ClustererParams& p,

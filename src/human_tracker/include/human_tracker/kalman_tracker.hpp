@@ -25,11 +25,10 @@ struct KalmanParams {
     double gate_dist{1.0};
     int    confirm_frames{3};
     int    lost_frames{10};
-    // Motion classification
-    double motion_displacement_thresh{0.20}; // [m] displacement from spawn (must also exceed speed thresh)
-    double motion_speed_thresh{0.25};        // [m/s] Kalman velocity estimate to classify as human
-    int    static_timeout_frames{50};        // frames in candidate before discarding as static object
-    int    pause_timeout_frames{300};        // frames paused before discarding (30s at 10Hz)
+    double motion_displacement_thresh{0.20}; // [m]
+    double motion_speed_thresh{0.25};        // [m/s]
+    int    static_timeout_frames{50};
+    int    pause_timeout_frames{300};        // ~30s at 10Hz
 };
 
 struct Prediction {
@@ -45,8 +44,8 @@ struct Track {
     StateCov        cov{StateCov::Identity()};
     int             seen_count{0};
     int             missed_count{0};
-    int             motion_frames{0};  // frames in current motion_state
-    double          spawn_x{0.0};      // position at confirmation (for displacement check)
+    int             motion_frames{0};
+    double          spawn_x{0.0};
     double          spawn_y{0.0};
 
     Prediction predict_horizon(double dt, int N) const;
@@ -57,7 +56,6 @@ class KalmanTracker {
 public:
     explicit KalmanTracker(const KalmanParams& params);
 
-    // Update with new detections (x, y pairs in odom frame)
     void update(const std::vector<ObsVec>& detections);
 
     const std::vector<Track>& confirmed_tracks() const;
@@ -71,10 +69,10 @@ private:
     std::vector<Track>     tracks_;
     uint32_t               next_id_{0};
 
-    Eigen::Matrix4d F_;   // state transition
-    Eigen::Matrix<double, 2, 4> H_;  // observation
-    Eigen::Matrix4d Q_;   // process noise
-    Eigen::Matrix2d R_;   // measurement noise
+    Eigen::Matrix4d F_;
+    Eigen::Matrix<double, 2, 4> H_;
+    Eigen::Matrix4d Q_;
+    Eigen::Matrix2d R_;
 };
 
 } // namespace human_tracker

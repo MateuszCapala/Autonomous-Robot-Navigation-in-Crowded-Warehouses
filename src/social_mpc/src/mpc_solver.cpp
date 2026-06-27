@@ -31,8 +31,7 @@ MpcSolver::MpcSolver() : impl_(new Impl()) {
     impl_->nlp_out = social_mpc_acados_get_nlp_out(impl_->capsule);
     impl_->solver  = social_mpc_acados_get_nlp_solver(impl_->capsule);
 
-    // Warm-up solve to trigger lazy HPIPM initialization.
-    // Avoids ~200ms spike on the first real solve call.
+    // dummy solve on startup, otherwise first real call takes ~200ms
     MpcInput warmup{};
     warmup.human_params.fill(999.0);
     solve(warmup);
@@ -53,13 +52,11 @@ MpcOutput MpcSolver::solve(const MpcInput& input) {
     auto* nlp_in = impl_->nlp_in;
     auto* nlp_out= impl_->nlp_out;
 
-    // Initial state constraint (equality: lbx0 = ubx0 = x0)
     double x0[MPC_NX] = {input.x0[0], input.x0[1], input.x0[2]};
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "lbx", x0);
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "ubx", x0);
 
-    // Stage yref: [Xg, Yg, tg, 0, 0,  0, 0, 0, 0, 0]
-    //             goal(3) + control(2) + repulsion targets(5, always 0)
+    // goal + zero controls + zero repulsion targets
     double yref[MPC_NY] = {
         input.goal[0], input.goal[1], input.goal[2], 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0
@@ -67,20 +64,16 @@ MpcOutput MpcSolver::solve(const MpcInput& input) {
     for (int k = 0; k < MPC_N; ++k)
         ocp_nlp_cost_model_set(cfg, dims, nlp_in, k, "yref", yref);
 
-    // Terminal yref: [Xg, Yg, tg,  0, 0, 0, 0, 0]
-    //                goal(3) + repulsion targets(5, always 0)
     double yref_e[MPC_NY_E] = {
         input.goal[0], input.goal[1], input.goal[2],
         0.0, 0.0, 0.0, 0.0, 0.0
     };
     ocp_nlp_cost_model_set(cfg, dims, nlp_in, MPC_N, "yref", yref_e);
 
-    // Human parameters per stage
     for (int k = 0; k < MPC_N; ++k) {
         const double* p = input.human_params.data() + k * MPC_NP;
         social_mpc_acados_update_params(impl_->capsule, k, const_cast<double*>(p), MPC_NP);
     }
-    // Terminal stage parameters (use last prediction step)
     const double* p_last = input.human_params.data() + (MPC_N - 1) * MPC_NP;
     social_mpc_acados_update_params(
         impl_->capsule, MPC_N, const_cast<double*>(p_last), MPC_NP);

@@ -65,6 +65,8 @@ env/
 .env
 .env.*
 secrets/
+.claude
+.claude/*
 
 # OS
 .DS_Store

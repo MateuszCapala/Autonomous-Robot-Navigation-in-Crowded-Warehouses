@@ -15,7 +15,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(social_navigation_msgs REQUIRED)
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 
-# ── ACADOS ────────────────────────────────────────────────────────────────────
+# ACADOS
 set(ACADOS_ROOT $ENV{HOME}/acados)
 set(ACADOS_INCLUDE_DIRS
     ${ACADOS_ROOT}/include
@@ -35,7 +35,6 @@ file(GLOB ACADOS_GEN_SOURCES
 list(FILTER ACADOS_GEN_SOURCES EXCLUDE REGEX "main_.*\\.c$")
 list(FILTER ACADOS_GEN_SOURCES EXCLUDE REGEX "acados_sim_solver.*\\.c$")
 
-# ─────────────────────────────────────────────────────────────────────────────
 set(DEPS
   rclcpp rclcpp_lifecycle geometry_msgs nav_msgs
   tf2_ros tf2_geometry_msgs social_navigation_msgs

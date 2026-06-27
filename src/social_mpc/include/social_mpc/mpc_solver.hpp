@@ -5,24 +5,24 @@
 
 namespace social_mpc {
 
-constexpr int MPC_NX   = 3;                        // [X, Y, theta]
-constexpr int MPC_NU   = 2;                        // [v, omega]
-constexpr int MPC_NP   = 20;                       // per stage: M*[xh,yh] + M*[vhx,vhy]
+constexpr int MPC_NX   = 3;   // [X, Y, theta]
+constexpr int MPC_NU   = 2;   // [v, omega]
+constexpr int MPC_NP   = 20;  // M*[xh,yh] + M*[vhx,vhy] per stage
 constexpr int MPC_N    = 30;
 constexpr int MPC_M    = 5;
-constexpr int MPC_NY   = MPC_NX + MPC_NU + MPC_M; // 10: goal + control + repulsion
-constexpr int MPC_NY_E = MPC_NX + MPC_M;          //  8: goal + repulsion (no control)
+constexpr int MPC_NY   = MPC_NX + MPC_NU + MPC_M;
+constexpr int MPC_NY_E = MPC_NX + MPC_M;
 
 struct MpcInput {
-    Eigen::Vector3d x0;                             // current robot state [X, Y, theta]
-    Eigen::Vector3d goal;                           // [X_ref, Y_ref, theta_ref]
-    std::array<double, MPC_N * MPC_NP> human_params; // per stage: [xh0,yh0,...,xh4,yh4]
+    Eigen::Vector3d x0;
+    Eigen::Vector3d goal;
+    std::array<double, MPC_N * MPC_NP> human_params;
 };
 
 struct MpcOutput {
-    Eigen::Vector2d u0;     // [v, omega]
-    int             status; // 0 = success
-    std::array<Eigen::Vector3d, MPC_N + 1> trajectory; // predicted states [X, Y, theta]
+    Eigen::Vector2d u0;
+    int             status;
+    std::array<Eigen::Vector3d, MPC_N + 1> trajectory;
 };
 
 class MpcSolver {
@@ -36,7 +36,7 @@ public:
     MpcOutput solve(const MpcInput& input);
 
 private:
-    // Opaque pointer — keeps ACADOS C headers out of this header
+    // pimpl: keeps ACADOS C headers out of this header
     struct Impl;
     Impl* impl_{nullptr};
 };

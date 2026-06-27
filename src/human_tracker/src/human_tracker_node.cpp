@@ -226,7 +226,7 @@ private:
                 hs.pred_x.assign(pred.x.begin(), pred.x.end());
                 hs.pred_y.assign(pred.y.begin(), pred.y.end());
             } else if (obs_idx < static_cast<int>(obs_sorted.size())) {
-                // Static obstacle — constant position for all prediction steps
+                // static obstacle, position doesn't change over horizon
                 const DetectedHuman& ob = obs_sorted[obs_idx++];
                 hs.id  = UINT32_MAX - 1 - static_cast<uint32_t>(obs_idx);
                 hs.x   = ob.x; hs.y = ob.y;
@@ -254,7 +254,7 @@ private:
         visualization_msgs::msg::MarkerArray ma;
         const auto& tracks = tracker_->confirmed_tracks();
 
-        // Delete old markers first
+        // clear previous frame
         visualization_msgs::msg::Marker del;
         del.action = visualization_msgs::msg::Marker::DELETEALL;
         ma.markers.push_back(del);
@@ -264,7 +264,7 @@ private:
             const auto pred = t.predict_horizon(DT, N);
             const auto lifetime = rclcpp::Duration::from_seconds(0.5);
 
-            // Body cylinder
+            // body
             visualization_msgs::msg::Marker body;
             body.header.frame_id = odom_frame_;
             body.header.stamp    = stamp;
@@ -281,7 +281,7 @@ private:
             body.lifetime = lifetime;
             ma.markers.push_back(body);
 
-            // Prediction trajectory line
+            // predicted path
             visualization_msgs::msg::Marker line;
             line.header  = body.header;
             line.ns      = "pred_lines";
@@ -303,7 +303,7 @@ private:
             }
             ma.markers.push_back(line);
 
-            // Uncertainty spheres every 6 steps — radius grows with time
+            // uncertainty spheres, radius increases further into the horizon
             for (int k = 5; k < N; k += 6) {
                 visualization_msgs::msg::Marker sphere;
                 sphere.header  = body.header;
