@@ -3,8 +3,10 @@
 Navigation system for Nova Carter mobile robot in a busy warhouse environment. This system solves two problems, shortest way to the goal, while actively tracking worker's movement predicting their path and avoiding collisions adjusting it's route in real time. 
 
 ## Demo
-https://github.com/user-attachments/assets/114acd87-4818-4e57-81c2-b5f472948c02
-https://github.com/user-attachments/assets/9a6d6df0-1786-449a-bea4-cc578cdd127d
+
+<img width="480" height="270" alt="filmik1" src="https://github.com/user-attachments/assets/3620cd54-2513-4237-bf04-d9e93a7fada8" />
+<img width="480" height="270" alt="filmik2" src="https://github.com/user-attachments/assets/485f553e-f444-41a3-9c39-a44ddc8c4686" />
+
 ---
 
 ## How it works
