@@ -100,7 +100,6 @@ private:
         const auto& p = msg->pose.pose.position;
         const auto& q = msg->pose.pose.orientation;
 
-        // Extract yaw from quaternion
         const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
         const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
         robot_state_[0] = p.x;
@@ -134,11 +133,10 @@ private:
             return;
         }
 
-        // Build human params: per stage k → [xh0,yh0,...,xh4,yh4]
         MpcInput input;
         input.x0   = robot_state_;
         input.goal = *goal_;
-        input.human_params.fill(999.0); // default: dummy humans far away
+        input.human_params.fill(999.0);
 
         int real_humans = 0;
         if (latest_humans_) {
@@ -146,9 +144,7 @@ private:
             real_humans = static_cast<int>(latest_humans_->num_confirmed);
             for (int k = 0; k < MPC_N; ++k) {
                 for (int i = 0; i < MPC_M; ++i) {
-                    // Positions: first M*2 slots
                     const int pos_base = k * MPC_NP + i * 2;
-                    // Velocities: next M*2 slots (offset by M*2 within stage)
                     const int vel_base = k * MPC_NP + MPC_M * 2 + i * 2;
                     if (i < static_cast<int>(humans.size()) &&
                         k < static_cast<int>(humans[i].pred_x.size())) {
@@ -187,7 +183,6 @@ private:
         }
         pub_path_->publish(path_msg);
 
-        // Reactive safety: proximity stop/slow + crossing yield
         double min_human_dist = std::numeric_limits<double>::max();
         double yield_scale    = 1.0;
 
@@ -198,8 +193,6 @@ private:
                 min_human_dist = std::min(min_human_dist,
                     static_cast<double>(h.distance_to_robot));
 
-                // Crossing yield: slow robot when a human will cross its straight-ahead path.
-                // Uses time-to-closest-approach (TCA) between robot and human.
                 const double rv  = out.u0[0];
                 const double rvx = rv * std::cos(robot_state_[2]);
                 const double rvy = rv * std::sin(robot_state_[2]);
@@ -214,7 +207,6 @@ private:
                     if (t_ca > 0.0 && t_ca < CROSSING_YIELD_HORIZON) {
                         const double d_ca = std::hypot(dx + t_ca * dvx, dy + t_ca * dvy);
                         if (d_ca < CROSSING_YIELD_DIST) {
-                            // Yield: slow proportionally — closer approach = more slowdown
                             const double urgency = 1.0 - d_ca / CROSSING_YIELD_DIST;
                             const double time_factor = 1.0 - t_ca / CROSSING_YIELD_HORIZON;
                             yield_scale = std::min(yield_scale,

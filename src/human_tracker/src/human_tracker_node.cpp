@@ -201,7 +201,6 @@ private:
 
         arr.num_confirmed = static_cast<uint32_t>(sorted.size());
 
-        // Sort obstacles by distance to robot
         std::vector<DetectedHuman> obs_sorted = latest_obstacles_;
         std::ranges::sort(obs_sorted, [this](const DetectedHuman& a, const DetectedHuman& b) {
             const float da = (a.x - robot_x_) * (a.x - robot_x_) + (a.y - robot_y_) * (a.y - robot_y_);
@@ -226,7 +225,6 @@ private:
                 hs.pred_x.assign(pred.x.begin(), pred.x.end());
                 hs.pred_y.assign(pred.y.begin(), pred.y.end());
             } else if (obs_idx < static_cast<int>(obs_sorted.size())) {
-                // static obstacle, position doesn't change over horizon
                 const DetectedHuman& ob = obs_sorted[obs_idx++];
                 hs.id  = UINT32_MAX - 1 - static_cast<uint32_t>(obs_idx);
                 hs.x   = ob.x; hs.y = ob.y;
@@ -254,7 +252,6 @@ private:
         visualization_msgs::msg::MarkerArray ma;
         const auto& tracks = tracker_->confirmed_tracks();
 
-        // clear previous frame
         visualization_msgs::msg::Marker del;
         del.action = visualization_msgs::msg::Marker::DELETEALL;
         ma.markers.push_back(del);
@@ -264,7 +261,6 @@ private:
             const auto pred = t.predict_horizon(DT, N);
             const auto lifetime = rclcpp::Duration::from_seconds(0.5);
 
-            // body
             visualization_msgs::msg::Marker body;
             body.header.frame_id = odom_frame_;
             body.header.stamp    = stamp;
@@ -281,7 +277,6 @@ private:
             body.lifetime = lifetime;
             ma.markers.push_back(body);
 
-            // predicted path
             visualization_msgs::msg::Marker line;
             line.header  = body.header;
             line.ns      = "pred_lines";
@@ -303,7 +298,6 @@ private:
             }
             ma.markers.push_back(line);
 
-            // uncertainty spheres, radius increases further into the horizon
             for (int k = 5; k < N; k += 6) {
                 visualization_msgs::msg::Marker sphere;
                 sphere.header  = body.header;
@@ -328,25 +322,20 @@ private:
         pub_markers_->publish(ma);
     }
 
-    // Preprocessor / clusterer params
     PreprocessorParams preproc_params_;
     ClustererParams    cluster_params_;
 
-    // Tracker
     std::unique_ptr<KalmanTracker> tracker_;
 
-    // TF
     std::shared_ptr<tf2_ros::Buffer>            tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::string odom_frame_;
 
-    // Robot pose (updated by odom subscriber)
     float robot_x_{0.f};
     float robot_y_{0.f};
     float obstacle_radius_max_{4.f};
     std::vector<DetectedHuman> latest_obstacles_;
 
-    // Publishers / subscribers
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_lidar_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr       sub_odom_;
     rclcpp_lifecycle::LifecyclePublisher<

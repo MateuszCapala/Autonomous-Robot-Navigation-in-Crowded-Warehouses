@@ -56,7 +56,6 @@ MpcOutput MpcSolver::solve(const MpcInput& input) {
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "lbx", x0);
     ocp_nlp_constraints_model_set(cfg, dims, nlp_in, nlp_out, 0, "ubx", x0);
 
-    // goal + zero controls + zero repulsion targets
     double yref[MPC_NY] = {
         input.goal[0], input.goal[1], input.goal[2], 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0

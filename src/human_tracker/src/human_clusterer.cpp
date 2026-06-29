@@ -41,7 +41,6 @@ std::vector<DetectedHuman> extract_humans(
         float z_max = std::numeric_limits<float>::lowest();
         float cx = 0.f, cy = 0.f, cz = 0.f;
 
-        // Nearest point to robot (for obstacle position)
         float nearest_x = 0.f, nearest_y = 0.f, nearest_z = 0.f;
         float nearest_d2 = std::numeric_limits<float>::max();
 
@@ -75,7 +74,6 @@ std::vector<DetectedHuman> extract_humans(
         if (is_human) {
             humans.push_back({cx / n, cy / n, cz / n});
         } else if (obstacles && nearest_d2 <= obs_r2) {
-            // Use nearest point so the robot keeps distance from the surface
             obstacles->push_back({nearest_x, nearest_y, nearest_z});
         }
     }

@@ -15,7 +15,7 @@ from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
 
 # ── Problem dimensions ────────────────────────────────────────────────────────
 N   = 30    # horizon steps
-DT  = 0.1   # [s] — must match Kalman tracker dt
+DT  = 0.1   # [s] - must match Kalman tracker dt
 M   = 5     # max tracked humans (matches HumanArray padding)
 
 # ── Ellipse safety zone ───────────────────────────────────────────────────────
@@ -28,9 +28,9 @@ K_FWD    = 1.5  # [s] forward shift of ellipse center along human velocity:
 # ── Cost weights ──────────────────────────────────────────────────────────────
 W_X     = 5.0   # position error X
 W_Y     = 5.0   # position error Y
-W_THETA = 0.1   # heading error — low: don't constrain turning during avoidance
+W_THETA = 0.1   # heading error - low: don't constrain turning during avoidance
 W_V     = 0.5   # linear velocity regularisation
-W_OMEGA = 2.5   # angular velocity regularisation — high to suppress steering oscillation
+W_OMEGA = 2.5   # angular velocity regularisation - high to suppress steering oscillation
 
 W_X_e     = 10.0  # terminal position X
 W_Y_e     = 10.0  # terminal position Y
