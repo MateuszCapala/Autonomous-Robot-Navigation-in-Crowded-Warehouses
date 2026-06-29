@@ -4,7 +4,7 @@ Navigation system for Nova Carter mobile robot in a busy warhouse environment. T
 
 ## Demo
 
-<img width="480" height="270" alt="filmik1" src="https://github.com/user-attachments/assets/3620cd54-2513-4237-bf04-d9e93a7fada8" />
+<img width="480" height="270" alt="filmik1" src="https://github.com/user-attachments/assets/8ea9a001-4c46-4a72-bc9b-9be29a0fa655" />
 <img width="480" height="270" alt="filmik2" src="https://github.com/user-attachments/assets/485f553e-f444-41a3-9c39-a44ddc8c4686" />
 
 ---
